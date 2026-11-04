@@ -197,11 +197,11 @@ with tab1:
     # ── Key IPO Facts ─────────────────────────────────────────────────────────
     col1, col2, col3, col4, col5 = st.columns(5)
     with col1:
-        st.metric("Max Offer Price", "₱10.00")
+        st.metric("Final IPO Price", "₱6.60", help="Final offer price determined via bookbuilding (filing ceiling: ₱10.00)")
         st.metric("Analyst Target", "₱7.50–₱8.50")
     with col2:
-        st.metric("Target Raise", "₱92.3B")
-        st.metric("Market Cap", "₱669B (~$10.8B USD)")
+        st.metric("Total Raised", "₱60.9B", help="Including overallotment (target ceiling was ₱92.3B)")
+        st.metric("Market Cap at Listing", "₱441.5B (~$7.0B USD)")
     with col3:
         st.metric("Public Float", "12%", delta="⚠️ Below 15% standard")
         st.metric("Total Shares", "66.9B fully diluted")
@@ -343,9 +343,10 @@ with tab2:
         ))
         # Reference lines
         for price, label, color in [
-            (10.00, "Max Offer (₱10)", "#f44336"),
+            (10.00, "Max Offer Ceiling (₱10)", "#f44336"),
             (8.00,  "Analyst Mid (₱8)", "#ff9800"),
             (7.50,  "Analyst Low (₱7.50)", "#ff9800"),
+            (6.60,  "Final IPO Price (₱6.60)", "#00e676"),
         ]:
             fig.add_hline(y=price, line_dash="dash", line_color=color,
                           annotation_text=label, annotation_position="right")

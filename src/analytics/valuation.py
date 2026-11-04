@@ -24,6 +24,7 @@ GCASH = {
     "revenue_ntm_php_bn":      90.0,
     "gross_margin_est":        0.63,     # Estimated; company doesn't break out explicitly
     "total_shares_bn":         66.90,    # Fully diluted share count
+    "final_offer_price_php":   6.60,     # Final IPO offer price set via bookbuilding
     "max_price_php":           10.00,
     "analyst_mid_php":         8.00,
 }
