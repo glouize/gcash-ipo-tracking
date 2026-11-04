@@ -24,9 +24,13 @@ GCASH = {
     "revenue_ntm_php_bn":      90.0,
     "gross_margin_est":        0.63,     # Estimated; company doesn't break out explicitly
     "total_shares_bn":         66.90,    # Fully diluted share count
-    "final_offer_price_php":   6.60,     # Final IPO offer price set via bookbuilding
-    "max_price_php":           10.00,
-    "analyst_mid_php":         8.00,
+    "final_offer_price_php":   6.60,     # Final IPO offer price set via bookbuilding (Oct 12, 2026)
+    "listing_market_cap_php_bn": 441.54, # Actual market cap at ₱6.60 × 66.9B shares
+    "max_price_php":           10.00,    # Administrative ceiling (not achieved)
+    "analyst_mid_php":         7.50,     # Post-pricing analyst consensus midpoint (₱7.00–₱8.00)
+    # Post-listing actuals (derived)
+    "actual_pe_at_listing":    24.6,     # ₱441.5B / ₱17.95B NTM net income
+    "actual_ev_rev_at_listing": 4.91,   # ₱441.5B / ₱90B NTM revenue
 }
 
 GCASH["gross_profit_ntm_php_bn"] = GCASH["revenue_ntm_php_bn"] * GCASH["gross_margin_est"]
@@ -253,7 +257,7 @@ def run_all_methods(peer_ev_revenue: float = 5.5, peer_pe: float = 28.0) -> pd.D
         "Low (₱)":  round(df["Low (₱)"].median(), 2),
         "Mid (₱)":  round(df["Mid (₱)"].median(), 2),
         "High (₱)": round(df["High (₱)"].median(), 2),
-        "Notes":    "Analyst target: ₱7.50–₱8.50",
+        "Notes":    "Post-pricing analyst target: ₱7.00–₱8.00 | IPO priced at ₱6.60",
     }
     return df
 

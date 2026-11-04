@@ -181,35 +181,39 @@ def train_classifier(data: pd.DataFrame | None = None) -> dict:
 # GCash Prediction
 # ─────────────────────────────────────────────────────────────────────────────
 
-# GCash feature vector — update psex_30d_return and vix_on_pricing_day at runtime
+# GCash feature vector — updated with ACTUAL post-pricing data (IPO priced at ₱6.60)
+# Market cap at listing: ₱441.5B (not ₱669B — that was the max ceiling)
+# P/E recalculated: ₱441.5B / ~₱17.95B NTM net income = ~24.6×
+# EV/Revenue recalculated: ₱441.5B / ₱90B NTM rev = ~4.91×
+# Price revision: ₱6.60 final vs ₱10.00 ceiling = -34% revision (strongest predictive signal!)
 GCASH_FEATURES = {
-    "revenue_growth_yoy":        0.10,   # H1 2026 YoY — decelerating
-    "net_margin":                0.249,  # H1 2026
-    "gross_margin":              0.63,   # Estimated
-    "float_pct":                 0.12,   # 12% public float
-    "insider_selling_pct":       0.80,   # 80% secondary offering
+    "revenue_growth_yoy":        0.10,   # H1 2026 YoY — decelerating from 45% in 2025
+    "net_margin":                0.249,  # H1 2026 actual
+    "gross_margin":              0.63,   # Estimated from prospectus
+    "float_pct":                 0.12,   # 12% public float (SEC exemption granted)
+    "insider_selling_pct":       0.80,   # 80% of offering is secondary shares ⚠️
     "secondary_pct":             0.80,
-    "lockup_overhang_ratio":     7.35,   # 58.87B locked / 8.03B float
-    "days_s1_to_ipo":            45.0,   # Sept → Oct (fast)
+    "lockup_overhang_ratio":     7.35,   # 58.87B locked / 8.03B public float
+    "days_s1_to_ipo":            45.0,   # Sep 5 SEC letter → Oct 20 listing (fast)
     "ipo_month":                 10.0,   # October
-    "price_range_revision_pct":  0.00,   # TBD — update when S-1/A filed
-    "underwriter_tier":          1.0,    # Top-tier assumed
-    "concurrent_ipo_count":      2.0,    # Estimate
-    "psex_30d_return":           0.00,   # UPDATE LIVE before prediction
-    "vix_on_pricing_day":       18.0,    # UPDATE LIVE before prediction
-    "pe_ratio":                 37.5,    # ₱669B cap / ₱17.8B NTM NI
-    "ev_revenue_multiple_at_ipo": 7.44,  # ₱669B / ₱90B NTM revenue
-    "mau_millions":             40.4,
-    "profitable_flag":           1.0,
-    "em_market_flag":            1.0,
-    "dual_class_flag":           0.0,
+    "price_range_revision_pct": -0.34,   # ACTUAL: priced at ₱6.60 vs ₱10.00 ceiling = -34% ⚠️
+    "underwriter_tier":          1.0,    # Top-tier underwriters (BDO Capital, First Metro)
+    "concurrent_ipo_count":      2.0,    # Concurrent PSE IPO activity estimate
+    "psex_30d_return":           0.00,   # UPDATE LIVE at prediction time
+    "vix_on_pricing_day":       18.0,    # UPDATE LIVE at prediction time
+    "pe_ratio":                 24.6,    # ₱441.5B actual market cap / ₱17.95B NTM NI
+    "ev_revenue_multiple_at_ipo": 4.91,  # ₱441.5B / ₱90B NTM revenue (actual listing)
+    "mau_millions":             40.4,    # Monthly active users as of H1 2026
+    "profitable_flag":           1.0,    # ✅ Profitable at IPO (₱17.2B net income 2025)
+    "em_market_flag":            1.0,    # Emerging market (PSE)
+    "dual_class_flag":           0.0,    # Single-class shares
 }
 
 
 def predict_gcash(
     psex_30d_return: float = 0.02,
     vix: float = 18.0,
-    price_revision_pct: float = 0.00,
+    price_revision_pct: float | None = None,
 ) -> dict:
     """
     Run the trained model to predict GCash Day-1 pop probability and expected return.
@@ -217,7 +221,7 @@ def predict_gcash(
     Args:
         psex_30d_return:    PSEi 30-day trailing return (live, fetched at runtime)
         vix:                VIX index on pricing day (live)
-        price_revision_pct: S-1/A price range revision delta (update when known)
+        price_revision_pct: S-1/A price range revision delta (defaults to actual -0.34)
 
     Returns:
         dict with pop_probability, expected_day1_return, confidence, feature_importances.
@@ -232,7 +236,8 @@ def predict_gcash(
     features = GCASH_FEATURES.copy()
     features["psex_30d_return"]       = psex_30d_return
     features["vix_on_pricing_day"]    = vix
-    features["price_range_revision_pct"] = price_revision_pct
+    if price_revision_pct is not None:
+        features["price_range_revision_pct"] = price_revision_pct
 
     X = pd.DataFrame([features])[FEATURE_COLS]
     X_scaled = scaler.transform(X)

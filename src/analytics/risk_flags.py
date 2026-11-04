@@ -157,13 +157,12 @@ GCASH_STATIC_FLAGS: list[RiskFlag] = [
         name="Largest PH IPO Ever — Price Discovery Risk",
         severity=Severity.INFO,
         description=(
-            "At ₱669B market cap, GCash will be one of the top-5 largest PSE-listed companies "
-            "from Day-1. There is limited comparable precedent for price discovery of a "
-            "company this large on the PSE. Institutional demand from local funds may be "
-            "insufficient to absorb selling pressure."
+            "At ₱441.5B market cap (listing price ₱6.60), GCash became one of the top-5 largest PSE-listed companies "
+            "from Day-1. IPO was priced 34% below the ₱10.00 administrative ceiling, reflecting macroeconomic headwinds "
+            "and conservative bookbuilding. Limited comparable precedent for price discovery of a company this large on the PSE."
         ),
-        detail="Target market cap: ₱669B (~US$10.8B).",
-        source="Market Analysis",
+        detail="Actual listing market cap: ₱441.5B (~US$7.6B). IPO raised ₱60.9B (overallotment included).",
+        source="Market Analysis / PSE Disclosure",
     ),
 ]
 

@@ -76,14 +76,14 @@ def load_macro():
 
 
 @st.cache_data(ttl=900)
-def load_prediction(psex_30d, vix):
+def load_prediction(psex_30d, vix, rev_pct=None):
     from src.analytics.classifier import predict_gcash, train_classifier, MODEL_PATH
     from src.storage.database import write_prediction
     if not MODEL_PATH.exists():
         train_classifier()
-    pred = predict_gcash(psex_30d_return=psex_30d, vix=vix)
+    pred = predict_gcash(psex_30d_return=psex_30d, vix=vix, price_revision_pct=rev_pct)
     try:
-        write_prediction(pred, psex_input=psex_30d, vix_input=vix)
+        write_prediction(pred, psex_input=psex_30d, vix_input=vix, price_rev=rev_pct if rev_pct is not None else -0.34)
     except Exception:
         pass
     return pred
@@ -104,6 +104,24 @@ def load_lifecycle():
     }
 
 
+@st.cache_data(ttl=300)
+def load_post_listing():
+    from src.analytics.post_listing import (
+        get_post_listing_df, get_return_attribution,
+        get_price_targets_df, get_greenshoe_status,
+        get_lockup_risk_timeline, get_volume_analysis,
+    )
+    quote_price = load_gcash_quote()["current_price"]
+    return {
+        "df":          get_post_listing_df(),
+        "attribution": get_return_attribution(quote_price),
+        "targets_df":  get_price_targets_df(quote_price),
+        "greenshoe":   get_greenshoe_status(),
+        "lockup":      get_lockup_risk_timeline(),
+        "volume":      get_volume_analysis(),
+    }
+
+
 @st.cache_data(ttl=600)
 def load_risk_flags():
     from src.analytics.risk_flags import get_all_flags, compute_risk_score
@@ -113,10 +131,20 @@ def load_risk_flags():
 @st.cache_data(ttl=1800)
 def load_sentiment():
     from src.ingestion.sentiment import fetch_news_sentiment, fetch_google_trends, build_daily_sentiment
-    from src.storage.database import write_sentiment
+    from src.storage.database import write_sentiment, read_table
     news   = fetch_news_sentiment(days_back=14)
     trends = fetch_google_trends()
     daily  = build_daily_sentiment(days_back=14)
+    # Fallback: load last-known from SQLite if live fetch returns nothing
+    if daily.empty:
+        try:
+            daily = read_table("stg_sentiment_daily")
+            if not daily.empty:
+                daily = daily[["as_of_date", "mention_count", "avg_compound", "dominant_sentiment"]].copy()
+                daily = daily.rename(columns={"as_of_date": "date"})
+                daily["date"] = pd.to_datetime(daily["date"])
+        except Exception:
+            pass
     try:
         if not daily.empty:
             write_sentiment(daily)
@@ -188,9 +216,10 @@ with st.sidebar:
 
 
 # ── Main Tabs ─────────────────────────────────────────────────────────────────
-tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs([
+tab1, tab2, tab3, tab4, tab5, tab6, tab7 = st.tabs([
     "📋 Overview",
     "💰 Valuation",
+    "📊 Post-Listing Performance",
     "🤖 ML Prediction",
     "📡 Sentiment",
     "🗓 Lifecycle Monitor",
@@ -482,18 +511,180 @@ with tab2:
             c_low  = consensus_row["Low (₱)"].iloc[0]
             c_mid  = consensus_row["Mid (₱)"].iloc[0]
             c_high = consensus_row["High (₱)"].iloc[0]
+            quote  = load_gcash_quote()
+            curr   = quote["current_price"]
+            vs_mid = round((curr - c_mid) / c_mid * 100, 1)
             st.info(
-                f"**Consensus Fair Value: ₱{c_low:.2f} – ₱{c_high:.2f}** (mid: ₱{c_mid:.2f})\n\n"
-                f"At ₱10/share (max), GCash would trade at a premium to our mid consensus. "
-                f"Analyst target (₱7.50–₱8.50) aligns with our model."
+                f"**Consensus Fair Value: ₱{c_low:.2f} – ₱{c_high:.2f}** (mid: ₱{c_mid:.2f})  \n"
+                f"Current price ₱{curr:.2f} is **{vs_mid:+.1f}%** vs consensus mid.  \n"
+                f"IPO was priced at ₱6.60 (34% below ₱10 ceiling). Post-pricing analyst range: ₱7.00–₱8.00."
             )
 
 
 # ═════════════════════════════════════════════════════════════════════════════
-# TAB 3 — ML Prediction
+# TAB 3 — Post-Listing Performance
 # ═════════════════════════════════════════════════════════════════════════════
 with tab3:
+    st.subheader("📊 Post-Listing Performance Tracker — PSE: GCASH (D+15)")
+    st.caption("Listed October 20, 2026 at ₱6.60 · Greenshoe stabilization active through November 19, 2026")
+
+    pl = load_post_listing()
+    quote = load_gcash_quote()
+
+    # ── Return Attribution ────────────────────────────────────────────────────
+    attr = pl["attribution"]
+    st.markdown("#### Return Attribution Since IPO")
+    a1, a2, a3, a4 = st.columns(4)
+    with a1:
+        st.metric("Total Return", f"{attr['total_return_pct']:+.2f}%",
+                  delta=f"₱{attr['ipo_price']} → ₱{attr['current_price']:.2f}")
+    with a2:
+        st.metric("Market (PSEi Beta)", f"{attr['market_return_pct']:+.2f}%",
+                  help="PSEi move since listing day")
+    with a3:
+        st.metric("GCASH Alpha", f"{attr['alpha_pct']:+.2f}%",
+                  delta="Stock-specific outperformance",
+                  delta_color="normal" if attr["alpha_pct"] >= 0 else "inverse")
+    with a4:
+        vol = pl["volume"]
+        st.metric("Volume Decay (D+1 avg)", f"{vol['volume_decay_pct']:+.1f}%",
+                  delta=f"Avg {vol['avg_volume_ex_listing']}M sh/day",
+                  delta_color="inverse")
+
+    st.divider()
+
+    # ── Post-Listing Candlestick + Volume ─────────────────────────────────────
+    df_hist = pl["df"]
+    col_chart1, col_chart2 = st.columns([3, 1])
+    with col_chart1:
+        st.markdown("#### Daily Price Action vs. IPO Price & PSEi")
+        fig_pl = go.Figure()
+        fig_pl.add_trace(go.Candlestick(
+            x=df_hist["date"], open=df_hist["open"],
+            high=df_hist["high"], low=df_hist["low"], close=df_hist["close"],
+            name="PSE: GCASH",
+            increasing_line_color="#00e676", decreasing_line_color="#f44336",
+        ))
+        fig_pl.add_hline(y=6.60, line_dash="dash", line_color="#00e5ff",
+                         annotation_text="IPO Offer ₱6.60", annotation_position="bottom right")
+        fig_pl.add_hline(y=quote["current_price"], line_dash="dot", line_color="#e040fb",
+                         annotation_text=f"Current ₱{quote['current_price']:.2f}",
+                         annotation_position="top right")
+        fig_pl.update_layout(
+            template="plotly_dark", height=300,
+            xaxis_rangeslider_visible=False,
+            yaxis=dict(title="₱ per Share", tickprefix="₱"),
+            margin=dict(t=10, b=20),
+        )
+        st.plotly_chart(fig_pl, use_container_width=True)
+
+        # Volume bar chart
+        fig_vol = go.Figure(go.Bar(
+            x=df_hist["date"], y=df_hist["volume_m"],
+            marker_color=["#00b0ff" if i == 0 else "#334d6e" for i in range(len(df_hist))],
+            name="Volume (M shares)"
+        ))
+        fig_vol.add_hline(y=float(df_hist["volume_m"].iloc[1:].mean()), line_dash="dash",
+                          line_color="#ff9800", annotation_text="Avg (ex-listing)")
+        fig_vol.update_layout(
+            template="plotly_dark", height=180, showlegend=False,
+            yaxis=dict(title="Volume (M)"),
+            margin=dict(t=5, b=20),
+        )
+        st.plotly_chart(fig_vol, use_container_width=True)
+
+    with col_chart2:
+        st.markdown("#### vs. PSEi (Indexed)")
+        fig_idx = go.Figure()
+        fig_idx.add_trace(go.Scatter(
+            x=df_hist["date"], y=df_hist["gcash_return_pct"],
+            mode="lines+markers", name="GCASH", line=dict(color="#00e676", width=2),
+        ))
+        fig_idx.add_trace(go.Scatter(
+            x=df_hist["date"], y=df_hist["psex_return_pct"],
+            mode="lines", name="PSEi", line=dict(color="#ff9800", width=1.5, dash="dash"),
+        ))
+        fig_idx.add_hline(y=0, line_color="gray", line_dash="solid")
+        fig_idx.update_layout(
+            template="plotly_dark", height=490,
+            yaxis=dict(title="Return % since listing", ticksuffix="%"),
+            legend=dict(orientation="h", y=1.05),
+            margin=dict(t=10, b=10),
+        )
+        st.plotly_chart(fig_idx, use_container_width=True)
+
+    st.divider()
+
+    # ── 12-Month Price Targets ────────────────────────────────────────────────
+    st.markdown("#### 12-Month Forward Price Targets")
+    targets_df = pl["targets_df"]
+    st.dataframe(targets_df, use_container_width=True, hide_index=True)
+
+    # Visual: target range waterfall
+    methods  = targets_df["Method"].tolist()[:-1]  # Exclude consensus row
+    lows     = targets_df["12M Low (₱)"].tolist()[:-1]
+    mids     = targets_df["12M Mid (₱)"].tolist()[:-1]
+    highs    = targets_df["12M High (₱)"].tolist()[:-1]
+
+    fig_tgt = go.Figure()
+    fig_tgt.add_trace(go.Scatter(
+        name="12M Mid Target", x=methods, y=mids,
+        mode="markers", marker=dict(size=14, color="#e040fb", symbol="diamond"),
+        error_y=dict(type="data", array=[h-m for h,m in zip(highs,mids)],
+                     arrayminus=[m-l for m,l in zip(mids,lows)], visible=True, color="#9c27b0"),
+    ))
+    fig_tgt.add_hline(y=quote["current_price"], line_dash="dash", line_color="#00e5ff",
+                      annotation_text=f"Current ₱{quote['current_price']:.2f}")
+    fig_tgt.add_hline(y=6.60, line_dash="dot", line_color="#4caf50",
+                      annotation_text="IPO ₱6.60", annotation_position="bottom right")
+    fig_tgt.update_layout(
+        template="plotly_dark", height=360,
+        xaxis_tickangle=-20,
+        yaxis=dict(title="₱ per Share", tickprefix="₱", range=[4, 13]),
+        margin=dict(t=20, b=80),
+    )
+    st.plotly_chart(fig_tgt, use_container_width=True)
+
+    st.divider()
+
+    # ── Greenshoe & Lockup ────────────────────────────────────────────────────
+    gs_col, lk_col = st.columns(2)
+    gs = pl["greenshoe"]
+    lk = pl["lockup"]
+
+    with gs_col:
+        st.markdown("#### 🛡️ Greenshoe Stabilization Status")
+        badge = "🟢 ACTIVE" if gs["is_active"] else "🔴 EXPIRED"
+        st.markdown(f"**{badge}** — Expires {gs['greenshoe_expiry']} ({gs['days_to_expiry']} days away)")
+        st.caption(gs["status_label"])
+        st.markdown(f"- **Overallotment shares:** {gs['shares_bn']}B shares ({gs['shares_bn']/8.03*100:.0f}% of float)")
+        st.markdown(f"- **Implied support floor:** ₱{gs['implied_support_floor']:.2f} (IPO offer price)")
+        st.progress(gs["pct_elapsed"] / 100, text=f"{gs['pct_elapsed']:.0f}% of 30-day stabilization window elapsed")
+
+    with lk_col:
+        st.markdown("#### ⚠️ Lockup Expiry Risk")
+        st.markdown(f"**Expires: {lk['lockup_expiry']}** ({lk['days_to_lockup']} days away)")
+        st.markdown(f"- **Overhang ratio:** {lk['overhang_ratio']}× public float")
+        st.markdown(f"- **Locked shares:** {lk['locked_shares_bn']}B of {lk['locked_shares_bn'] + lk['public_float_bn']:.1f}B total")
+        st.progress(lk["pct_lockup_elapsed"] / 100, text=f"{lk['pct_lockup_elapsed']:.0f}% of 180-day lockup elapsed")
+        st.caption(lk["historical_impact_note"])
+
+    st.divider()
+    st.markdown("#### Shareholder Lockup Schedule")
+    st.dataframe(pd.DataFrame(lk["shareholder_schedule"]), use_container_width=True, hide_index=True)
+
+
+# ═════════════════════════════════════════════════════════════════════════════
+# TAB 4 — ML Prediction (Post-Pricing Retrospective)
+# ═════════════════════════════════════════════════════════════════════════════
+with tab4:
     st.subheader("Day-1 Pop Prediction — XGBoost Classifier")
+    st.info(
+        "**ℹ️ Context:** GCash listed on Oct 20, 2026 at ₱6.60 and closed flat on Day-1 "
+        "(intraday high ₱6.76 / +2.4%). The model below reflects the actual post-pricing "
+        "inputs: price was revised **-34%** below the ₱10.00 ceiling, which is the dominant "
+        "suppressive signal. Use sensitivity analysis below to explore alternate scenarios."
+    )
 
     macro = load_macro()
     col_inp1, col_inp2, col_inp3 = st.columns(3)
@@ -504,12 +695,14 @@ with tab3:
         psex_input = st.number_input("PSEi 30d Return (%)", min_value=-30.0, max_value=30.0,
                                      value=float(round(macro["psex_30d"] * 100, 1)), step=0.5)
     with col_inp3:
-        rev_input  = st.number_input("Price Range Revision (%)", min_value=-20.0, max_value=30.0,
-                                     value=0.0, step=0.5,
-                                     help="% change in offer price midpoint (S-1/A vs initial S-1). Fill in when known.")
+        rev_input  = st.number_input(
+            "Price Range Revision (%)", min_value=-40.0, max_value=30.0,
+            value=-34.0, step=0.5,
+            help="Actual: ₱6.60 final vs ₱10.00 ceiling = -34% revision. Adjust to model alternate pricing scenarios."
+        )
 
     with st.spinner("Running prediction model..."):
-        pred = load_prediction(psex_input / 100.0, vix_input)
+        pred = load_prediction(psex_input / 100.0, vix_input, rev_input / 100.0)
 
     st.divider()
     col1, col2, col3 = st.columns(3)
@@ -570,16 +763,16 @@ with tab3:
     st.caption("How does the prediction change with different market conditions?")
 
     scenarios = {
-        "PSEi -10% + VIX 30 (Bear Market)":     {"psex": -0.10, "vix": 30.0, "rev": 0.00},
-        "Current Market (Baseline)":             {"psex": macro["psex_30d"], "vix": macro["vix"], "rev": 0.00},
-        "PSEi +5% + VIX 15 (Bull Market)":      {"psex": 0.05,  "vix": 15.0, "rev": 0.00},
-        "Offer Price Raised +10% (S-1/A)":       {"psex": macro["psex_30d"], "vix": macro["vix"], "rev": 0.10},
+        "Actual Pricing (PSEi Flat, VIX 18, Rev -34%)": {"psex": 0.00, "vix": 18.0, "rev": -0.34},
+        "PSEi -10% + VIX 30 (Bear Market)":            {"psex": -0.10, "vix": 30.0, "rev": -0.34},
+        "PSEi +5% + VIX 15 (Bull Market)":             {"psex": 0.05,  "vix": 15.0, "rev": -0.34},
+        "Aggressive Pricing (No Discount, Rev 0%)":    {"psex": 0.02,  "vix": 18.0, "rev": 0.00},
     }
 
     sa_rows = []
     for scen_name, params in scenarios.items():
         with st.spinner(f"Running: {scen_name}"):
-            r = load_prediction(params["psex"], params["vix"])
+            r = load_prediction(params["psex"], params["vix"], params["rev"])
         sa_rows.append({
             "Scenario": scen_name,
             "Pop Prob": f"{r['pop_probability']}%",
@@ -590,10 +783,10 @@ with tab3:
 
 
 # ═════════════════════════════════════════════════════════════════════════════
-# TAB 4 — Sentiment
+# TAB 5 — Sentiment
 # ═════════════════════════════════════════════════════════════════════════════
-with tab4:
-    st.subheader("Market Sentiment — GCash IPO")
+with tab5:
+    st.subheader("Market Sentiment — GCash (PSE: GCASH)")
 
     with st.spinner("Fetching sentiment data..."):
         news_df, trends_df, daily_df = load_sentiment()
@@ -677,9 +870,9 @@ with tab4:
 
 
 # ═════════════════════════════════════════════════════════════════════════════
-# TAB 5 — Lifecycle Monitor
+# TAB 6 — Lifecycle Monitor
 # ═════════════════════════════════════════════════════════════════════════════
-with tab5:
+with tab6:
     st.subheader("GCash IPO Lifecycle Monitor")
     lc = load_lifecycle()
 
@@ -687,10 +880,9 @@ with tab5:
     with col1:
         st.metric("Current Phase", lc["current_phase"])
     with col2:
-        delta_color = "normal" if lc["days_to_listing"] > 0 else "off"
-        st.metric("Days to Listing",
-                  lc["days_to_listing"] if lc["days_to_listing"] > 0 else "LISTED!",
-                  delta="Oct 20, 2026")
+        days_since = abs(lc["days_to_listing"]) if lc["days_to_listing"] <= 0 else 0
+        st.metric("Days Since Listing", f"D+{days_since}",
+                  delta="Listed Oct 20, 2026 at ₱6.60", delta_color="off")
     with col3:
         st.metric("Lockup Overhang Ratio", f"{lc['overhang']:.1f}×",
                   delta="⚠️ Very High (>7×)", delta_color="inverse")
@@ -755,9 +947,9 @@ with tab5:
 
 
 # ═════════════════════════════════════════════════════════════════════════════
-# TAB 6 — Data Staging & Export
+# TAB 7 — Data Staging & Export
 # ═════════════════════════════════════════════════════════════════════════════
-with tab6:
+with tab7:
     st.subheader("💾 SQLite Staging Layer & Incremental ETL Pipeline")
     st.caption("Full extraction from sources with intelligent incremental delta loading (CDC), MD5 record-hash fingerprinting, and CSV exports.")
 

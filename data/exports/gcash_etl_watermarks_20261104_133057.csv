@@ -1,0 +1,6 @@
+entity_name,last_loaded_at,last_record_count,last_status
+peer_comps,2026-11-04T05:30:49Z,4,SUCCESS
+valuation,2026-11-04T05:30:49Z,6,SUCCESS
+macro_snapshot,2026-11-04T05:30:53Z,1,SUCCESS
+predictions,2026-11-04T05:30:53Z,1,SUCCESS
+sentiment_daily,2026-11-04T05:30:56Z,0,SUCCESS
