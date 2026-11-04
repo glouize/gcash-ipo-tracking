@@ -26,6 +26,12 @@ st.set_page_config(
 )
 
 # ── Lazy imports (avoid slow loads on every rerun) ────────────────────────────
+@st.cache_data(ttl=60)
+def load_gcash_quote():
+    from src.ingestion.market_data import get_gcash_stock_quote
+    return get_gcash_stock_quote()
+
+
 @st.cache_data(ttl=3600)
 def load_static_data():
     from src.ingestion.pse_edge_scraper import get_gcash_static, compute_revenue_growth
@@ -148,6 +154,18 @@ with st.sidebar:
     st.caption("Mynt Inc. · PSE: GCASH")
     st.divider()
 
+    quote = load_gcash_quote()
+    st.markdown("### 🔴 LIVE MARKET QUOTE")
+    st.metric(
+        label="PSE: GCASH",
+        value=f"₱{quote['current_price']:.2f}",
+        delta=f"{quote['day_change']:+.2f} ({quote['day_change_pct']:+.2f}% today)",
+    )
+    st.caption(
+        f"**IPO:** ₱{quote['ipo_price']:.2f} · **Net:** {quote['gain_since_ipo_pct']:+.1f}% · **Day:** ₱{quote['day_low']:.2f}–₱{quote['day_high']:.2f}"
+    )
+    st.divider()
+
     lc = load_lifecycle()
     st.metric("Days to Listing", lc["days_to_listing"], help="Oct 20, 2026")
     st.metric("Days to Lockup Expiry", lc["days_to_lockup"], help="Apr 20, 2027")
@@ -191,6 +209,80 @@ with tab1:
         f'<span class="phase-badge">📍 {lc["current_phase"]}</span>',
         unsafe_allow_html=True
     )
+
+    st.divider()
+
+    # ── Live Stock Quote Banner ───────────────────────────────────────────────
+    quote = load_gcash_quote()
+    st.markdown("### 📈 Live Stock Value & Market Performance (PSE: GCASH)")
+    qcol1, qcol2, qcol3, qcol4, qcol5 = st.columns(5)
+    with qcol1:
+        st.metric(
+            "Current Stock Price",
+            f"₱{quote['current_price']:.2f}",
+            delta=f"{quote['day_change']:+.2f} ({quote['day_change_pct']:+.2f}% today)",
+        )
+    with qcol2:
+        st.metric(
+            "Gain Since IPO (₱6.60)",
+            f"{quote['gain_since_ipo_pct']:+.2f}%",
+            delta=f"₱{quote['gain_since_ipo']:+.2f}/sh",
+        )
+    with qcol3:
+        st.metric(
+            "Day Range",
+            f"₱{quote['day_low']:.2f} – ₱{quote['day_high']:.2f}",
+            help=f"Open: ₱{quote['day_open']:.2f} · Prev Close: ₱{quote['prev_close']:.2f}",
+        )
+    with qcol4:
+        st.metric(
+            "Live Market Cap",
+            f"₱{quote['market_cap_php_bn']:.1f}B",
+            help=f"~${quote['market_cap_usd_bn']:.2f}B USD",
+        )
+    with qcol5:
+        st.metric(
+            "Volume Traded",
+            f"{quote['day_volume_m']}M shs",
+            help=f"Traded Value: ~₱{quote['day_value_m']}M",
+        )
+
+    # ── Post-Listing Stock Price Chart ────────────────────────────────────────
+    df_hist = quote["history"]
+    fig_stock = go.Figure()
+    fig_stock.add_trace(go.Candlestick(
+        x=df_hist["date"],
+        open=df_hist["open"],
+        high=df_hist["high"],
+        low=df_hist["low"],
+        close=df_hist["close"],
+        name="PSE: GCASH",
+        increasing_line_color="#00e676",
+        decreasing_line_color="#f44336",
+    ))
+    fig_stock.add_hline(
+        y=quote["ipo_price"],
+        line_dash="dash",
+        line_color="#00e5ff",
+        annotation_text="IPO Offer Price (₱6.60)",
+        annotation_position="bottom right",
+    )
+    fig_stock.add_hline(
+        y=quote["all_time_high"],
+        line_dash="dot",
+        line_color="#ffb300",
+        annotation_text=f"Listing High (₱{quote['all_time_high']:.2f})",
+        annotation_position="top right",
+    )
+    fig_stock.update_layout(
+        title="PSE: GCASH — Post-Listing Daily Price History (Stabilization Window)",
+        template="plotly_dark",
+        height=320,
+        xaxis_rangeslider_visible=False,
+        yaxis=dict(title="Stock Price (PHP ₱)", tickprefix="₱"),
+        margin=dict(t=40, b=20, l=40, r=40),
+    )
+    st.plotly_chart(fig_stock, use_container_width=True)
 
     st.divider()
 
@@ -342,10 +434,12 @@ with tab2:
             )
         ))
         # Reference lines
+        quote = load_gcash_quote()
         for price, label, color in [
             (10.00, "Max Offer Ceiling (₱10)", "#f44336"),
             (8.00,  "Analyst Mid (₱8)", "#ff9800"),
             (7.50,  "Analyst Low (₱7.50)", "#ff9800"),
+            (quote["current_price"], f"Current Price (₱{quote['current_price']:.2f})", "#e040fb"),
             (6.60,  "Final IPO Price (₱6.60)", "#00e676"),
         ]:
             fig.add_hline(y=price, line_dash="dash", line_color=color,

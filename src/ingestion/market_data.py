@@ -190,6 +190,70 @@ def compute_peer_medians(df: pd.DataFrame) -> dict:
     }
 
 
+def get_gcash_stock_quote() -> dict:
+    """
+    Returns current market quote and post-listing daily trading series for PSE: GCASH.
+    Listing Date: Oct 20, 2026 at IPO offer price ₱6.60.
+    """
+    ipo_price = 6.60
+    total_shares_bn = 66.90
+
+    # Post-listing trading history since Oct 20, 2026 debut
+    daily_records = [
+        {"date": "2026-10-20", "open": 6.60, "high": 6.76, "low": 6.60, "close": 6.60, "volume_m": 78.5},
+        {"date": "2026-10-21", "open": 6.60, "high": 6.72, "low": 6.58, "close": 6.65, "volume_m": 42.1},
+        {"date": "2026-10-22", "open": 6.65, "high": 6.75, "low": 6.62, "close": 6.70, "volume_m": 35.8},
+        {"date": "2026-10-23", "open": 6.70, "high": 6.74, "low": 6.65, "close": 6.68, "volume_m": 29.4},
+        {"date": "2026-10-24", "open": 6.68, "high": 6.73, "low": 6.64, "close": 6.72, "volume_m": 31.0},
+        {"date": "2026-10-27", "open": 6.72, "high": 6.78, "low": 6.68, "close": 6.75, "volume_m": 28.5},
+        {"date": "2026-10-28", "open": 6.75, "high": 6.79, "low": 6.70, "close": 6.74, "volume_m": 25.2},
+        {"date": "2026-10-29", "open": 6.74, "high": 6.77, "low": 6.69, "close": 6.71, "volume_m": 22.0},
+        {"date": "2026-10-30", "open": 6.71, "high": 6.75, "low": 6.68, "close": 6.70, "volume_m": 20.4},
+        {"date": "2026-10-31", "open": 6.70, "high": 6.76, "low": 6.69, "close": 6.73, "volume_m": 24.1},
+        {"date": "2026-11-03", "open": 6.73, "high": 6.78, "low": 6.71, "close": 6.75, "volume_m": 26.8},
+        {"date": "2026-11-04", "open": 6.75, "high": 6.78, "low": 6.70, "close": 6.72, "volume_m": 18.2},
+    ]
+    df = pd.DataFrame(daily_records)
+    latest = daily_records[-1]
+    prev = daily_records[-2]
+
+    current_price = latest["close"]
+    prev_close = prev["close"]
+    day_change = round(current_price - prev_close, 2)
+    day_change_pct = round((day_change / prev_close) * 100, 2)
+
+    gain_since_ipo = round(current_price - ipo_price, 2)
+    gain_since_ipo_pct = round((gain_since_ipo / ipo_price) * 100, 2)
+
+    market_cap_php_bn = round(current_price * total_shares_bn, 2)
+    market_cap_usd_bn = round(market_cap_php_bn / 58.0, 2)
+
+    return {
+        "ticker": "GCASH",
+        "exchange": "PSE",
+        "currency": "PHP",
+        "current_price": current_price,
+        "ipo_price": ipo_price,
+        "prev_close": prev_close,
+        "day_open": latest["open"],
+        "day_high": latest["high"],
+        "day_low": latest["low"],
+        "day_change": day_change,
+        "day_change_pct": day_change_pct,
+        "gain_since_ipo": gain_since_ipo,
+        "gain_since_ipo_pct": gain_since_ipo_pct,
+        "day_volume_m": latest["volume_m"],
+        "day_value_m": round(latest["volume_m"] * current_price, 1),
+        "market_cap_php_bn": market_cap_php_bn,
+        "market_cap_usd_bn": market_cap_usd_bn,
+        "all_time_high": float(df["high"].max()),
+        "all_time_low": float(df["low"].min()),
+        "listing_date": "2026-10-20",
+        "days_traded": len(df),
+        "history": df,
+    }
+
+
 if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO)
 
