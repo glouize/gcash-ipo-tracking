@@ -1,0 +1,7 @@
+id,captured_at,run_date,psex_30d_return_input,vix_input,price_revision_pct,pop_probability,expected_day1_return,signal,confidence,record_hash
+1,2026-09-20T05:51:37Z,2026-09-20,0.0,14.8100004196167,0.0,0.4,0.3,Bearish,High,
+2,2026-09-20T05:55:13Z,2026-09-20,0.0,14.8100004196167,0.0,0.4,0.3,Bearish,High,eff7e1da3be99c12e7f5332eeb2161ed
+3,2026-09-20T07:36:25Z,2026-09-20,0.0,14.8,0.0,0.4,0.3,Bearish,High,e55b6c095442f8f90def5ff1aa7b0a86
+4,2026-09-20T07:36:26Z,2026-09-20,-0.1,30.0,0.0,0.2,-7.0,Bearish,High,3bc9d05f0dafb251e29bd82f0a6b1e4c
+5,2026-09-20T07:36:26Z,2026-09-20,0.05,15.0,0.0,0.5,0.1,Bearish,High,681350397ffd8b4a26e6220a4fd04525
+6,2026-11-04T04:27:06Z,2026-11-04,0.0,18.0,0.0,0.3,-0.1,Bearish,High,572d7398e049bb781142d5f67760d44b

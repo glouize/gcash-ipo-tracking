@@ -1,0 +1,4 @@
+id,captured_at,run_date,sentiment_date,mention_count,avg_compound,dominant_sentiment,record_hash
+1,2026-09-20T05:55:18Z,2026-09-20,2026-09-18 00:00:00,1,0.8519,Bullish,bb7f04b4e05d685cfad77eb15f64205e
+2,2026-09-20T05:55:18Z,2026-09-20,2026-09-19 00:00:00,1,0.8074,Bullish,cae0eb3a707ddfbb4db487b05bf07a34
+3,2026-09-20T05:55:18Z,2026-09-20,2026-09-20 00:00:00,1,-0.1531,Bearish,0ffbf902d72e62d336ff94db3771dde1

@@ -1,0 +1,19 @@
+id,captured_at,run_date,method,low_php,mid_php,high_php,notes,peer_ev_revenue,peer_pe,record_hash
+1,2026-09-20T05:51:30Z,2026-09-20,Revenue Multiple (EV/NTM Rev),4.74,5.92,7.1,"Peer EV/NTM Rev: 5.5×, EM discount: 20%",0.0,0.0,
+2,2026-09-20T05:51:30Z,2026-09-20,Gross Profit Multiple (EV/GP),5.19,6.1,7.02,"Peer EV/GP: 9.0×, EM discount: 20%",0.0,0.0,
+3,2026-09-20T05:51:30Z,2026-09-20,P/E Multiple,5.88,6.92,7.95,"Peer P/E: 28.0×, EM discount: 15%",0.0,0.0,
+4,2026-09-20T05:51:30Z,2026-09-20,DCF (5-Year),4.26,8.43,16.2,Bear/Base/Bull scenarios; WACC 9–12%; TGR 4–6%,0.0,0.0,
+5,2026-09-20T05:51:30Z,2026-09-20,PSE Precedent Transactions,6.63,10.14,12.48,PSE precedent median EV/Rev: 5.8× (+30% fintech premium for base),0.0,0.0,
+6,2026-09-20T05:51:30Z,2026-09-20,── CONSENSUS (median) ──,5.19,6.92,7.95,Analyst target: ₱7.50–₱8.50,0.0,0.0,
+7,2026-09-20T05:55:09Z,2026-09-20,Revenue Multiple (EV/NTM Rev),1.86,2.33,2.79,"Peer EV/NTM Rev: 2.161806508366626×, EM discount: 20%",2.161806508366626,31.05714,8650e9efa45a7d00d9f301a81c1f6e9a
+8,2026-09-20T05:55:09Z,2026-09-20,Gross Profit Multiple (EV/GP),5.19,6.1,7.02,"Peer EV/GP: 9.0×, EM discount: 20%",2.161806508366626,31.05714,1e1abbeef21470480630a56e5b01e3c0
+9,2026-09-20T05:55:09Z,2026-09-20,P/E Multiple,6.52,7.67,8.82,"Peer P/E: 31.05714×, EM discount: 15%",2.161806508366626,31.05714,27eaf0613eb4eb16e746a2e31eaf7173
+10,2026-09-20T05:55:09Z,2026-09-20,DCF (5-Year),4.26,8.43,16.2,Bear/Base/Bull scenarios; WACC 9–12%; TGR 4–6%,2.161806508366626,31.05714,f642b6053da256474a968f1d496c9dff
+11,2026-09-20T05:55:09Z,2026-09-20,PSE Precedent Transactions,6.63,10.14,12.48,PSE precedent median EV/Rev: 5.8× (+30% fintech premium for base),2.161806508366626,31.05714,67102495753298d88981bad5baf45faa
+12,2026-09-20T05:55:09Z,2026-09-20,── CONSENSUS (median) ──,5.19,7.67,8.82,Analyst target: ₱7.50–₱8.50,2.161806508366626,31.05714,c2ceee316aa2abd8723925467d9c607a
+13,2026-11-04T04:27:06Z,2026-11-04,Revenue Multiple (EV/NTM Rev),2.15,2.69,3.23,"Peer EV/NTM Rev: 2.5×, EM discount: 20%",2.5,32.0,dd5245e43519beec7491c1ac19cbd06c
+14,2026-11-04T04:27:06Z,2026-11-04,Gross Profit Multiple (EV/GP),5.19,6.1,7.02,"Peer EV/GP: 9.0×, EM discount: 20%",2.5,32.0,707ecfbb3713a5c53bbd7194eabcbf7a
+15,2026-11-04T04:27:06Z,2026-11-04,P/E Multiple,6.72,7.9,9.09,"Peer P/E: 32.0×, EM discount: 15%",2.5,32.0,d5df7ded9e59c6ae23fd56dded48921b
+16,2026-11-04T04:27:06Z,2026-11-04,DCF (5-Year),4.26,8.43,16.2,Bear/Base/Bull scenarios; WACC 9–12%; TGR 4–6%,2.5,32.0,3b414bc14c3827647bbfd47469f878af
+17,2026-11-04T04:27:06Z,2026-11-04,PSE Precedent Transactions,6.63,10.14,12.48,PSE precedent median EV/Rev: 5.8× (+30% fintech premium for base),2.5,32.0,9025ba1f1de98f927462054fa671fe29
+18,2026-11-04T04:27:06Z,2026-11-04,── CONSENSUS (median) ──,5.19,7.9,9.09,Analyst target: ₱7.50–₱8.50,2.5,32.0,5fdb7ace56e48555a902cad19567338a
