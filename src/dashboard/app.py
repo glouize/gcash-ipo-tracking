@@ -170,8 +170,7 @@ with st.sidebar:
     st.divider()
 
     lc = load_lifecycle()
-    st.metric("Days to Listing", lc["days_to_listing"], help="Oct 20, 2026")
-    st.metric("Days to Lockup Expiry", lc["days_to_lockup"], help="Apr 20, 2027")
+    st.metric("Days to Lockup Expiry", lc["days_to_lockup"], help="Apr 20, 2027 — when 88% of shares unlock")
 
     st.divider()
     macro = load_macro()
