@@ -52,7 +52,7 @@ def capture():
                 img_bytes = base64.b64decode(msg["result"]["data"])
                 with open(OUTPUT_PATH, "wb") as f:
                     f.write(img_bytes)
-                print(f"✅ Screenshot saved: {OUTPUT_PATH} ({len(img_bytes)} bytes)")
+                print(f"[OK] Screenshot saved: {OUTPUT_PATH} ({len(img_bytes)} bytes)")
                 break
 
         ws.close()
