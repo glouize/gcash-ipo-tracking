@@ -148,8 +148,11 @@ st.markdown("""
 
 # ── Sidebar ───────────────────────────────────────────────────────────────────
 with st.sidebar:
-    st.image("https://upload.wikimedia.org/wikipedia/commons/thumb/7/73/GCash_logo.svg/240px-GCash_logo.svg.png",
-             width=120)
+    logo_path = Path(__file__).resolve().parent.parent.parent / "assets" / "gcash_logo.png"
+    if logo_path.exists():
+        st.image(str(logo_path), width=150)
+    else:
+        st.image("https://upload.wikimedia.org/wikipedia/commons/5/52/GCash_logo.svg", width=150)
     st.title("GCash IPO Tracker")
     st.caption("Mynt Inc. · PSE: GCASH")
     st.divider()
